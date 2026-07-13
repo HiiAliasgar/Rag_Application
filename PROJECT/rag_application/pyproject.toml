@@ -1,0 +1,12 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rag-application"
+version = "0.1.0"
+description = "A Retrieval-Augmented Generation (RAG) application for AI-powered document Q&A"
+requires-python = ">=3.11"
+
+[project.optional-dependencies]
+dev = ["pytest", "pytest-asyncio", "black", "ruff"]
