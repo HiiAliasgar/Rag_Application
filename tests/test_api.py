@@ -1,8 +1,11 @@
 """Tests for RAG API endpoints."""
 
-import pytest
+import os
 from fastapi.testclient import TestClient
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
+
+os.environ.setdefault("OPENAI_API_KEY", "test-key")
+
 from src.app import app
 
 client = TestClient(app)

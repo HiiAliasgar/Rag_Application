@@ -1,9 +1,11 @@
 """Tests for RAG core components."""
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
+import os
+from unittest.mock import patch, MagicMock
 from src.rag_core import DocumentProcessor, VectorStore
 from langchain.schema import Document
+
+os.environ.setdefault("OPENAI_API_KEY", "test-key")
 
 
 class TestDocumentProcessor:
@@ -25,7 +27,7 @@ class TestDocumentProcessor:
     def test_process_text_empty(self):
         """Test processing empty text."""
         documents = self.processor.process_text("", source="empty")
-        assert len(documents) > 0
+        assert documents == []
 
     def test_chunk_size_respected(self):
         """Test that chunks respect size limit."""
@@ -55,11 +57,12 @@ class TestVectorStore:
 
     @patch('src.rag_core.OpenAIEmbeddings')
     @patch('src.rag_core.Chroma')
-    def test_vectorstore_initialization(self, mock_chroma, mock_embeddings):
+    def test_vectorstore_initialization(self, mock_chroma, mock_embeddings, tmp_path):
         """Test vector store initialization."""
-        vector_store = VectorStore(persist_directory="/tmp/test")
+        persist_directory = tmp_path / "chroma"
+        vector_store = VectorStore(persist_directory=str(persist_directory))
         
-        assert vector_store.persist_directory == "/tmp/test"
+        assert vector_store.persist_directory == str(persist_directory)
         mock_embeddings.assert_called_once()
 
     @patch('src.rag_core.OpenAIEmbeddings')

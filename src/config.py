@@ -10,10 +10,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Directories
-PROJECT_ROOT = Path(__file__).parent
-DATA_DIR = PROJECT_ROOT / "data"
-UPLOAD_DIR = DATA_DIR / "uploads"
-CHROMA_DB_DIR = DATA_DIR / "chroma_db"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DATA_DIR = Path(os.getenv("DATA_DIR", PROJECT_ROOT / "data"))
+UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", DATA_DIR / "uploads"))
+CHROMA_DB_DIR = Path(os.getenv("CHROMA_DB_PATH", DATA_DIR / "chroma_db"))
 
 # Create directories if they don't exist
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
@@ -36,9 +36,13 @@ TEMPERATURE = float(os.getenv("TEMPERATURE", "0.7"))
 # Logging
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
-# Validation
-if not OPENAI_API_KEY:
-    raise ValueError("OPENAI_API_KEY not set in environment variables")
+def require_openai_api_key() -> str:
+    """Return the configured OpenAI API key or raise a clear runtime error."""
+    if not OPENAI_API_KEY:
+        raise RuntimeError(
+            "OPENAI_API_KEY is not configured. Copy .env.example to .env and set your key."
+        )
+    return OPENAI_API_KEY
 
 __all__ = [
     "PROJECT_ROOT",
@@ -54,4 +58,5 @@ __all__ = [
     "RETRIEVAL_K",
     "TEMPERATURE",
     "LOG_LEVEL",
+    "require_openai_api_key",
 ]

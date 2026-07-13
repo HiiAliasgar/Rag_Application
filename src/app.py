@@ -1,6 +1,5 @@
 """FastAPI application for RAG system."""
 
-import os
 import logging
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse
@@ -13,10 +12,42 @@ from src.rag_chain import RAGChain
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Initialize components
-vector_store = VectorStore(persist_directory="./data/chroma_db")
-doc_processor = DocumentProcessor()
-rag_chain = RAGChain(retriever=vector_store.get_retriever())
+vector_store: VectorStore | None = None
+doc_processor: DocumentProcessor | None = None
+rag_chain: RAGChain | None = None
+
+
+def get_document_processor() -> DocumentProcessor:
+    """Create the document processor once and reuse it."""
+    global doc_processor
+    if doc_processor is None:
+        doc_processor = DocumentProcessor(
+            chunk_size=config.CHUNK_SIZE,
+            chunk_overlap=config.CHUNK_OVERLAP,
+        )
+    return doc_processor
+
+
+def get_vector_store() -> VectorStore:
+    """Create the vector store once and reuse it."""
+    global vector_store
+    if vector_store is None:
+        config.require_openai_api_key()
+        vector_store = VectorStore(persist_directory=str(config.CHROMA_DB_DIR))
+    return vector_store
+
+
+def get_rag_chain() -> RAGChain:
+    """Create the RAG chain once and reuse it."""
+    global rag_chain
+    if rag_chain is None:
+        store = get_vector_store()
+        rag_chain = RAGChain(
+            retriever=store.get_retriever(k=config.RETRIEVAL_K),
+            model=config.OPENAI_MODEL,
+            temperature=config.TEMPERATURE,
+        )
+    return rag_chain
 
 app = FastAPI(
     title="RAG Application",
@@ -50,18 +81,18 @@ async def upload_document(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="Only PDF files are supported")
     
     try:
-        # Save file temporarily
-        upload_dir = "./data/uploads"
-        os.makedirs(upload_dir, exist_ok=True)
-        file_path = os.path.join(upload_dir, file.filename)
+        upload_dir = config.UPLOAD_DIR
+        upload_dir.mkdir(parents=True, exist_ok=True)
+        file_path = upload_dir / file.filename
         
         with open(file_path, "wb") as f:
             content = await file.read()
             f.write(content)
-        
-        # Process document
-        documents = doc_processor.process_pdf(file_path)
-        vector_store.add_documents(documents)
+
+        processor = get_document_processor()
+        store = get_vector_store()
+        documents = processor.process_pdf(str(file_path))
+        store.add_documents(documents)
         
         return {
             "filename": file.filename,
@@ -81,7 +112,8 @@ async def query_documents(request: QueryRequest):
         raise HTTPException(status_code=400, detail="Question cannot be empty")
     
     try:
-        result = rag_chain.query(request.question)
+        chain = get_rag_chain()
+        result = chain.query(request.question)
         return QueryResponse(
             question=request.question,
             answer=result["answer"],
@@ -95,11 +127,11 @@ async def query_documents(request: QueryRequest):
 @app.get("/documents")
 async def list_documents():
     """List all uploaded documents."""
-    upload_dir = "./data/uploads"
-    if not os.path.exists(upload_dir):
-        return {"documents": []}
-    
-    documents = [f for f in os.listdir(upload_dir) if f.endswith(".pdf")]
+    upload_dir = config.UPLOAD_DIR
+    if not upload_dir.exists():
+        return {"documents": [], "count": 0}
+
+    documents = sorted(f.name for f in upload_dir.iterdir() if f.suffix.lower() == ".pdf")
     return {"documents": documents, "count": len(documents)}
 
 

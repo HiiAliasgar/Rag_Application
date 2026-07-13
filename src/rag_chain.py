@@ -6,6 +6,7 @@ from langchain.chat_models import ChatOpenAI
 from langchain.chains import RetrievalQA
 from langchain.prompts import PromptTemplate
 from langchain.schema import BaseRetriever
+from src import config
 
 logger = logging.getLogger(__name__)
 
@@ -24,12 +25,18 @@ Answer:"""
 class RAGChain:
     """RAG chain for question answering."""
 
-    def __init__(self, retriever: BaseRetriever, model: str = "gpt-3.5-turbo"):
+    def __init__(
+        self,
+        retriever: BaseRetriever,
+        model: str = "gpt-3.5-turbo",
+        temperature: float = 0.7,
+    ):
         """Initialize RAG chain."""
+        config.require_openai_api_key()
         self.retriever = retriever
         self.llm = ChatOpenAI(
             model_name=model,
-            temperature=0.7,
+            temperature=temperature,
             max_tokens=512
         )
         

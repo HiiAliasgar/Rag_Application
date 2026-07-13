@@ -71,6 +71,10 @@ class DocumentProcessor:
 
     def process_text(self, text: str, source: str = "text") -> List[Document]:
         """Process raw text into chunks."""
+        if not text.strip():
+            logger.info(f"Skipping empty text source: {source}")
+            return []
+
         documents = [Document(page_content=text, metadata={"source": source})]
         chunks = self.text_splitter.split_documents(documents)
         logger.info(f"Processed text ({source}) into {len(chunks)} chunks")
