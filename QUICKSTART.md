@@ -54,10 +54,13 @@ cp .env.example .env
 
 Edit `.env` and add your OpenAI API key:
 ```env
-OPENAI_API_KEY=sk-your-actual-key-here
+OPENAI_API_KEY=your-openai-api-key
+RAG_API_TOKEN=replace-with-a-long-random-token
 ```
 
 Get your key from: https://platform.openai.com/api-keys
+
+Keep RAG_API_TOKEN private. The Streamlit UI reads it from .env and sends it to protected API endpoints.
 
 ### 5. Initialize Data Directories
 
@@ -261,19 +264,19 @@ This shows interactive API documentation (Swagger UI).
 
 **Upload file**:
 ```bash
-curl -X POST -F "file=@document.pdf" http://localhost:8000/upload
+curl -X POST -H "Authorization: Bearer $RAG_API_TOKEN" -F "file=@document.pdf" http://localhost:8000/upload
 ```
 
 **Query**:
 ```bash
-curl -X POST -H "Content-Type: application/json" \
+curl -X POST -H "Authorization: Bearer $RAG_API_TOKEN" -H "Content-Type: application/json" \
   -d '{"question": "What is this about?"}' \
   http://localhost:8000/query
 ```
 
 **List documents**:
 ```bash
-curl http://localhost:8000/documents
+curl -H "Authorization: Bearer $RAG_API_TOKEN" http://localhost:8000/documents
 ```
 
 ## Next Steps
