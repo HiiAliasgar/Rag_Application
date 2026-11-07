@@ -1,8 +1,9 @@
 """FastAPI application for RAG system."""
 
+import hmac
 import logging
 from uuid import uuid4
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, Header
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from src import config  # Load config and env variables first
@@ -52,6 +53,17 @@ def get_rag_chain() -> RAGChain:
         )
     return rag_chain
 
+def require_api_token(authorization: str | None = Header(default=None)) -> bool:
+    """Protect document and query operations with a server-side bearer token."""
+    expected_token = config.RAG_API_TOKEN
+    if not expected_token:
+        raise HTTPException(status_code=503, detail="RAG_API_TOKEN is not configured.")
+    expected_header = f"Bearer {expected_token}"
+    if not authorization or not hmac.compare_digest(authorization, expected_header):
+        raise HTTPException(status_code=401, detail="Invalid or missing API token.")
+    return True
+
+
 app = FastAPI(
     title="RAG Application",
     description="Retrieval-Augmented Generation for document Q&A",
@@ -77,7 +89,7 @@ async def health():
     return {"status": "healthy", "service": "RAG Application"}
 
 
-@app.post("/upload")
+@app.post("/upload", dependencies=[Depends(require_api_token)])
 async def upload_document(file: UploadFile = File(...)):
     """Upload and process a PDF document with bounded, path-safe storage."""
     original_name = file.filename or "document.pdf"
@@ -114,7 +126,7 @@ async def upload_document(file: UploadFile = File(...)):
         logger.exception("Error processing uploaded PDF")
         raise HTTPException(status_code=500, detail="Unable to process the uploaded PDF")
 
-@app.post("/query", response_model=QueryResponse)
+@app.post("/query", response_model=QueryResponse, dependencies=[Depends(require_api_token)])
 async def query_documents(request: QueryRequest):
     """Query documents using RAG."""
     if not request.question.strip():
@@ -128,12 +140,12 @@ async def query_documents(request: QueryRequest):
             answer=result["answer"],
             sources=result["sources"]
         )
-    except Exception as e:
-        logger.error(f"Error querying: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error processing query: {str(e)}")
+    except Exception:
+        logger.exception("Error querying documents")
+        raise HTTPException(status_code=500, detail="Unable to process the query. Check server logs.")
 
 
-@app.get("/documents")
+@app.get("/documents", dependencies=[Depends(require_api_token)])
 async def list_documents():
     """List all uploaded documents."""
     upload_dir = config.UPLOAD_DIR
