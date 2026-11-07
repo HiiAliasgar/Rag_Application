@@ -48,7 +48,7 @@ docker-compose up --build
 
 ## Upload safety
 
-The API accepts PDF files up to 10 MB. Uploads are checked for a PDF signature and stored under a server-generated filename rather than a client-controlled path. The upload, document-listing and query endpoints are still intended for a trusted development environment; add authentication and authorization before exposing this service to untrusted users.
+The API accepts PDF files up to 10 MB. Uploads are checked for a PDF signature and stored under a server-generated filename rather than a client-controlled path. The upload, document-listing and query endpoints require a server-side bearer token. Set RAG_API_TOKEN in .env; the Streamlit UI and API clients send it in the Authorization header.
 
 ## Run locally
 

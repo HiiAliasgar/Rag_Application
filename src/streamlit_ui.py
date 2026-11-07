@@ -5,13 +5,16 @@ from __future__ import annotations
 import requests
 import streamlit as st
 
-API_BASE_URL = "http://localhost:8000"
+from src.api_client import api_get, api_post, RAG_API_TOKEN
 
 st.set_page_config(
     page_title="RAG Document Q&A",
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+if not RAG_API_TOKEN:
+    st.warning("Set RAG_API_TOKEN in your .env file. The API health check is public, but document operations require this token.")
 
 st.markdown(
     """
@@ -37,14 +40,6 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
-
-
-def api_get(path: str, timeout: int = 5):
-    return requests.get(f"{API_BASE_URL}{path}", timeout=timeout)
-
-
-def api_post(path: str, **kwargs):
-    return requests.post(f"{API_BASE_URL}{path}", **kwargs)
 
 
 def get_api_status() -> tuple[bool, str]:
