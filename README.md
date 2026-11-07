@@ -46,6 +46,10 @@ Add your `OPENAI_API_KEY` to `.env`, then run:
 docker-compose up --build
 ```
 
+## Upload safety
+
+The API accepts PDF files up to 10 MB. Uploads are checked for a PDF signature and stored under a server-generated filename rather than a client-controlled path. The upload, document-listing and query endpoints are still intended for a trusted development environment; add authentication and authorization before exposing this service to untrusted users.
+
 ## Run locally
 
 ```bash
