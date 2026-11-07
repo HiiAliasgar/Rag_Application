@@ -1,6 +1,7 @@
 """FastAPI application for RAG system."""
 
 import logging
+from uuid import uuid4
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -11,6 +12,8 @@ from src.rag_chain import RAGChain
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 
 vector_store: VectorStore | None = None
 doc_processor: DocumentProcessor | None = None
@@ -76,34 +79,40 @@ async def health():
 
 @app.post("/upload")
 async def upload_document(file: UploadFile = File(...)):
-    """Upload and process a PDF document."""
-    if not file.filename.endswith(".pdf"):
+    """Upload and process a PDF document with bounded, path-safe storage."""
+    original_name = file.filename or "document.pdf"
+    if not original_name.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are supported")
-    
+
     try:
+        content = await file.read(MAX_UPLOAD_BYTES + 1)
+        if len(content) > MAX_UPLOAD_BYTES:
+            raise HTTPException(status_code=413, detail="PDF exceeds the 10 MB upload limit")
+        if not content.startswith(b"%PDF-"):
+            raise HTTPException(status_code=400, detail="Uploaded file is not a valid PDF")
+
         upload_dir = config.UPLOAD_DIR
         upload_dir.mkdir(parents=True, exist_ok=True)
-        file_path = upload_dir / file.filename
-        
-        with open(file_path, "wb") as f:
-            content = await file.read()
-            f.write(content)
+        stored_name = f"{uuid4().hex}.pdf"
+        file_path = upload_dir / stored_name
+        file_path.write_bytes(content)
 
         processor = get_document_processor()
         store = get_vector_store()
         documents = processor.process_pdf(str(file_path))
         store.add_documents(documents)
-        
+
         return {
-            "filename": file.filename,
+            "filename": original_name,
             "status": "processed",
             "chunks": len(documents),
-            "message": f"Successfully processed {file.filename}"
+            "message": f"Successfully processed {original_name}"
         }
-    except Exception as e:
-        logger.error(f"Error uploading document: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
-
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Error processing uploaded PDF")
+        raise HTTPException(status_code=500, detail="Unable to process the uploaded PDF")
 
 @app.post("/query", response_model=QueryResponse)
 async def query_documents(request: QueryRequest):
