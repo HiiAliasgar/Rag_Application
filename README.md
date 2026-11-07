@@ -87,3 +87,8 @@ pytest -q
 Generated answers can be incomplete or incorrect. Verify important statements against the retrieved document passages. API access requires a valid model-provider key and may incur provider charges.
 
 [Source code](https://github.com/HiiAliasgar/Rag_Application)
+
+## API security
+
+Set a unique server-side `RAG_API_TOKEN` in your environment. The `/upload`, `/query` and `/documents` endpoints require an `Authorization: Bearer <token>` header. The `/health` endpoint remains public for service health checks. Do not expose the API without configuring this token.
+
