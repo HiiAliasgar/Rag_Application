@@ -6,6 +6,11 @@ from unittest.mock import patch
 
 os.environ.setdefault("OPENAI_API_KEY", "test-key")
 
+from src import config
+
+config.RAG_API_TOKEN = "test-rag-token"
+AUTH = {"Authorization": "Bearer test-rag-token"}
+
 from src.app import app
 
 client = TestClient(app)
@@ -32,7 +37,7 @@ class TestQueryEndpoint:
             "sources": ["source1.pdf"]
         }
         
-        response = client.post("/query", json={"question": "Test question?"})
+        response = client.post("/query", json={"question": "Test question?"}, headers=AUTH)
         
         assert response.status_code == 200
         data = response.json()
@@ -41,7 +46,7 @@ class TestQueryEndpoint:
 
     def test_query_empty_question(self):
         """Test query with empty question."""
-        response = client.post("/query", json={"question": ""})
+        response = client.post("/query", json={"question": ""}, headers=AUTH)
         assert response.status_code == 400
 
     @patch('src.app.rag_chain')
@@ -49,7 +54,7 @@ class TestQueryEndpoint:
         """Test query error handling."""
         mock_rag.query.side_effect = Exception("API Error")
         
-        response = client.post("/query", json={"question": "Test?"})
+        response = client.post("/query", json={"question": "Test?"}, headers=AUTH)
         assert response.status_code == 500
 
 
@@ -63,7 +68,7 @@ class TestDocumentsEndpoint:
         mock_exists.return_value = True
         mock_listdir.return_value = ["doc1.pdf", "doc2.pdf", "other.txt"]
         
-        response = client.get("/documents")
+        response = client.get("/documents", headers=AUTH)
         
         assert response.status_code == 200
         data = response.json()
