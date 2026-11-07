@@ -80,7 +80,7 @@ class TestDocumentsEndpoint:
         """Test listing documents when none exist."""
         mock_exists.return_value = False
         
-        response = client.get("/documents")
+        response = client.get("/documents", headers=AUTH)
         
         assert response.status_code == 200
         assert response.json()["count"] == 0
