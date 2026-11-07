@@ -25,6 +25,7 @@ API_PORT = int(os.getenv("API_PORT", "8000"))
 
 # OpenAI Configuration
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+RAG_API_TOKEN = os.getenv("RAG_API_TOKEN", "").strip()
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
 
 # RAG Configuration
@@ -52,6 +53,7 @@ __all__ = [
     "API_HOST",
     "API_PORT",
     "OPENAI_API_KEY",
+    "RAG_API_TOKEN",
     "OPENAI_MODEL",
     "CHUNK_SIZE",
     "CHUNK_OVERLAP",
